@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>さんすうクエスト ～まほうのすうじとドラゴンのそだてかた～</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
+  body {
+    font-family: 'Hiragino Kaku Gothic ProN', 'Yu Gothic', sans-serif;
+    background: #0f172a;
+    background-image: radial-gradient(#1e293b 2px, transparent 2px);
+    background-size: 24px 24px;
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 10px;
+    color: #334155;
+  }
+  .app-card {
+    background: #fef3c7; /* 羊皮紙風カラー */
+    width: 100%;
+    max-width: 420px;
+    border-radius: 20px;
+    box-shadow: 0 0 25px rgba(251, 191, 36, 0.4), inset 0 0 15px rgba(180, 83, 9, 0.2);
+    padding: 16px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+    border: 6px solid #b45309;
+  }
+
+  /* ステータスバー（RPGヘッダー） */
+  .rpg-status-bar {
+    background: #451a03;
+    color: #fef3c7;
+    padding: 10px;
+    border-radius: 12px;
+    font-size: 0.85em;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border: 2px solid #d97706;
+    margin-bottom: 12px;
+  }
+  .status-item { font-weight: bold; }
+  .title-badge { color: #fbbf24; font-size: 0.8em; display: block; }
+
+  /* バトル＆育成ステージ */
+  .battle-stage {
+    background: linear-gradient(to bottom, #1e1b4b, #312e81);
+    border-radius: 16px;
+    padding: 15px 10px;
+    color: white;
+    border: 3px solid #6366f1;
+    position: relative;
+    margin-bottom: 12px;
+    box-shadow: inset 0 0 20px rgba(0,0,0,0.6);
+  }
+  .monster-area {
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    min-height: 95px;
+  }
+  .unit-box { text-align: center; }
+  .unit-avatar { 
+    font-size: 3.2em; 
+    filter: drop-shadow(0 4px 6px rgba(0,0,0,0.5)); 
+    transition: transform 0.2s;
+    letter-spacing: -5px; /* ドラゴンが増えた際並びやすく調整 */
+  }
+  .unit-name { font-size: 0.75em; font-weight: bold; margin-top: 4px; color: #e0e7ff; }
+  
+  /* HPゲージ */
+  .hp-bar-bg { width: 80px; height: 8px; background: #374151; border-radius: 4px; margin: 4px auto; overflow: hidden; }
+  .hp-bar-fill { height: 100%; background: #ef4444; width: 100%; transition: width 0.3s; }
+
+  /* メッセージウィンドウ */
+  .msg-box {
+    background: rgba(0, 0, 0, 0.7);
+    border: 2px solid #f59e0b;
+    border-radius: 8px;
+    padding: 6px;
+    font-size: 0.85em;
+    color: #fef08a;
+    margin-top: 8px;
+    min-height: 32px;
+  }
+
+  /* 問題表示エリア */
+  .problem-box {
+    font-size: 2.5em;
+    font-weight: bold;
+    color: #451a03;
+    margin: 10px 0;
+    min-height: 65px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: #fffbeb;
+    border-radius: 12px;
+    border: 3px dashed #d97706;
+  }
+  .answer-display {
+    color: #dc2626;
+    border-bottom: 4px solid #dc2626;
+    min-width: 55px;
+    display: inline-block;
+  }
+
+  /* テンキー（RPGコマンド風） */
+  .numpad {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+  }
+  .btn {
+    background: linear-gradient(to bottom, #ffffff, #fef3c7);
+    border: 2px solid #b45309;
+    border-bottom: 5px solid #78350f;
+    border-radius: 12px;
+    font-size: 1.6em;
+    font-weight: bold;
+    color: #451a03;
+    padding: 12px 0;
+    cursor: pointer;
+  }
+  .btn:active { transform: translateY(3px); border-bottom-width: 2px; }
+  .btn-action { background: linear-gradient(to bottom, #22c55e, #15803d); color: white; border-color: #14532d; border-bottom-color: #052e16; }
+  .btn-clear { background: linear-gradient(to bottom, #ef4444, #b91c1c); color: white; border-color: #7f1d1d; border-bottom-color: #450a0a; }
+
+  /* 10分タイマー遮断 */
+  #lock-screen {
+    position: absolute;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: #020617;
+    color: #fef08a;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    z-index: 100;
+    padding: 20px;
+    display: none;
+  }
+</style>
+</head>
+<body>
+
+<div class="app-card">
+  <!-- RPGステータスバー -->
+  <div class="rpg-status-bar">
+    <div class="status-item">
+      <span class="title-badge" id="player-title">見習い冒険者</span>
+      Lv.<span id="player-lv">1</span> 勇者
+    </div>
+    <div class="status-item">
+      EXP: <span id="player-exp">0</span>/<span id="req-exp">2</span><br>
+      💎: <span id="gem-count">0</span>
+    </div>
+    <div class="status-item" style="color:#f87171;">
+      ⏳ <span id="time-left">10:00</span>
+    </div>
+  </div>
+
+  <!-- バトル＆ペット育成エリア -->
+  <div class="battle-stage">
+    <div class="monster-area">
+      <!-- パートナー（ドラゴン進化・仲間増加エリア） -->
+      <div class="unit-box" style="max-width: 50%;">
+        <div class="unit-avatar" id="pet-avatar">🥚</div>
+        <div class="hp-bar-bg"><div class="hp-bar-fill" style="background:#22c55e;"></div></div>
+        <div class="unit-name" id="pet-name">タマゴ</div>
+      </div>
+      <div style="font-size:1.5em; font-weight:bold; color:#f59e0b;">VS</div>
+      <!-- 敵モンスター -->
+      <div class="unit-box" style="max-width: 40%;">
+        <div class="unit-avatar" id="enemy-avatar">👾</div>
+        <div class="hp-bar-bg"><div class="hp-bar-fill" id="enemy-hp"></div></div>
+        <div class="unit-name" id="enemy-name">スライム</div>
+      </div>
+    </div>
+    <div class="msg-box" id="msg-box">野生の スライムが あらわれた！</div>
+  </div>
+
+  <!-- 計算問題エリア -->
+  <div class="problem-box">
+    <span id="problem-text">せってい中...</span>
+    <span class="answer-display" id="user-input">?</span>
+  </div>
+
+  <!-- テンキーコマンド -->
+  <div class="numpad">
+    <button class="btn" onclick="pressNum(1)">1</button>
+    <button class="btn" onclick="pressNum(2)">2</button>
+    <button class="btn" onclick="pressNum(3)">3</button>
+    <button class="btn" onclick="pressNum(4)">4</button>
+    <button class="btn" onclick="pressNum(5)">5</button>
+    <button class="btn" onclick="pressNum(6)">6</button>
+    <button class="btn" onclick="pressNum(7)">7</button>
+    <button class="btn" onclick="pressNum(8)">8</button>
+    <button class="btn" onclick="pressNum(9)">9</button>
+    <button class="btn btn-clear" onclick="clearInput()">けす</button>
+    <button class="btn" onclick="pressNum(0)">0</button>
+    <button class="btn btn-action" onclick="checkAnswer()">こうげき</button>
+  </div>
+
+  <!-- 10分ロック画面 -->
+  <div id="lock-screen">
+    <h2 style="font-size:1.8em; margin-bottom:15px; color:#f59e0b;">🏰 10ふん たったよ！</h2>
+    <p style="line-height:1.8; font-size:1.1em; text-align:center;">
+      勇者よ、きゅうけいも 修行の1つだ！<br>
+      目をやすめてから、また 冒険に出かけよう！<br><br>
+      （画面を 閉じてね）
+    </p>
+  </div>
+</div>
+
+<script>
+// --- 音響効果（Web Audio API） ---
+const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+function playSound(type) {
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+  const osc = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+  osc.connect(gain); gain.connect(audioCtx.destination);
+
+  if (type === 'attack') { // 攻撃ヒット
+    osc.type = 'square';
+    osc.frequency.setValueAtTime(300, audioCtx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(80, audioCtx.currentTime + 0.15);
+    gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.15);
+    osc.start(); osc.stop(audioCtx.currentTime + 0.15);
+  } else if (type === 'wrong') { // ミス
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(120, audioCtx.currentTime);
+    gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.25);
+    osc.start(); osc.stop(audioCtx.currentTime + 0.25);
+  } else if (type === 'levelup') { // レベルアップファンファーレ
+    const notes = [261, 329, 392, 523, 659, 783];
+    notes.forEach((freq, i) => {
+      const o = audioCtx.createOscillator();
+      const g = audioCtx.createGain();
+      o.connect(g); g.connect(audioCtx.destination);
+      o.frequency.value = freq;
+      g.gain.setValueAtTime(0.15, audioCtx.currentTime + i * 0.08);
+      g.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + i * 0.08 + 0.2);
+      o.start(audioCtx.currentTime + i * 0.08);
+      o.stop(audioCtx.currentTime + i * 0.08 + 0.2);
+    });
+  }
+}
+
+// --- ゲームデータ ＆ 進化テーブル ---
+let level = 1;
+let exp = 0;
+let reqExp = 2; // Lv.1->2 はたった2問でOK
+let gems = 0;
+let currentAnswer = 0;
+let userInputValue = "";
+let totalTimeSec = 600; // 10分制限
+
+const enemies = [
+  { name: "スライム", avatar: "👾" },
+  { name: "ゴブリン", avatar: "👺" },
+  { name: "おばけ", avatar: "👻" },
+  { name: "こうもり", avatar: "🦇" },
+  { name: "まほうつかい", avatar: "🧙‍♂️" },
+  { name: "ドラゴン", avatar: "🐲" }
+];
+let currentEnemy = enemies[0];
+
+const titles = ["見習い冒険者", "ドラゴンつかい", "魔法の勇者", "伝説のヒーロー", "ドラゴンマスター", "神話の勇者"];
+
+// --- ドラゴンの超速進化＆色違い仲間追加ロジック ---
+function updatePet() {
+  const petAvatar = document.getElementById('pet-avatar');
+  const petName = document.getElementById('pet-name');
+
+  if (level === 1) {
+    petAvatar.innerText = "🥚"; 
+    petName.innerText = "タマゴ";
+  } else if (level === 2) {
+    petAvatar.innerText = "🐣"; 
+    petName.innerText = "チビドラ";
+  } else if (level === 3) {
+    petAvatar.innerText = "🐲"; 
+    petName.innerText = "みどりドラゴン";
+  } else if (level === 4) {
+    // 最終形態へ進化
+    petAvatar.innerText = "🐉"; 
+    petName.innerText = "神龍（しんりゅう）";
+  } else if (level === 5) {
+    // ★色違いの仲間（赤ドラゴン）が増える！
+    petAvatar.innerText = "🐉🐲"; 
+    petName.innerText = "あかドラが なかまに！";
+  } else if (level === 6) {
+    // ★さらに色違いの仲間（青ドラゴン）が増える！
+    petAvatar.innerText = "🐉🐲🐉"; 
+    petName.innerText = "あおドラが なかまに！";
+  } else {
+    // ★オールスター（金・最強チーム）
+    petAvatar.innerText = "🐉🐲✨"; 
+    petName.innerText = "さいきょう ドラゴンたい！";
+  }
+}
+
+// --- 出題ロジック（10～19の割合を5%に調整） ---
+function generateProblem() {
+  userInputValue = "";
+  updateDisplay();
+
+  // 敵の変更
+  currentEnemy = enemies[Math.floor(Math.random() * enemies.length)];
+  document.getElementById('enemy-avatar').innerText = currentEnemy.avatar;
+  document.getElementById('enemy-name').innerText = currentEnemy.name;
+  document.getElementById('enemy-hp').style.width = '100%';
+  document.getElementById('msg-box').innerText = `あくまの ${currentEnemy.name} が あらわれた！`;
+
+  const isAddition = Math.random() < 0.5; // 足し算 / 引き算
+  
+  // 10～19が出る頻度を「わずか5%（メインは10の分解）」に調整
+  const isHardType = Math.random() < 0.05; 
+
+  let num1, num2, ans;
+
+  if (isAddition) {
+    if (!isHardType) {
+      // メイン(95%): 10までの足し算（10の分解・合成）
+      ans = Math.floor(Math.random() * 10) + 1; // 1～10
+      num1 = Math.floor(Math.random() * ans);
+      num2 = ans - num1;
+    } else {
+      // たまに(5%): 10～19のくり上がりなし足し算
+      const d1 = Math.floor(Math.random() * 5); // 0~4
+      const d2 = Math.floor(Math.random() * (9 - d1)); 
+      num1 = 10 + d1;
+      num2 = d2;
+      ans = num1 + num2;
+    }
+    document.getElementById('problem-text').innerText = `${num1} ＋ ${num2} ＝ `;
+  } else {
+    if (!isHardType) {
+      // メイン(95%): 10までの引き算（マイナスなし）
+      num1 = Math.floor(Math.random() * 10) + 1; // 1～10
+      num2 = Math.floor(Math.random() * (num1 + 1));
+      ans = num1 - num2;
+    } else {
+      // たまに(5%): 10～19からの引き算
+      const d1 = Math.floor(Math.random() * 9) + 1; 
+      num2 = Math.floor(Math.random() * (d1 + 1));
+      num1 = 10 + d1;
+      ans = num1 - num2;
+    }
+    document.getElementById('problem-text').innerText = `${num1} － ${num2} ＝ `;
+  }
+
+  currentAnswer = ans;
+}
+
+// --- 入力・ボタン処理 ---
+function pressNum(num) {
+  if (userInputValue.length < 2) {
+    userInputValue += num;
+    updateDisplay();
+  }
+}
+
+function clearInput() {
+  userInputValue = "";
+  updateDisplay();
+}
+
+function updateDisplay() {
+  document.getElementById('user-input').innerText = userInputValue === "" ? "?" : userInputValue;
+}
+
+// --- こうげき（答え合わせ） ---
+function checkAnswer() {
+  if (userInputValue === "") return;
+
+  const val = parseInt(userInputValue, 10);
+  if (val === currentAnswer) {
+    // 正解・攻撃ヒット
+    playSound('attack');
+    document.getElementById('enemy-hp').style.width = '0%';
+    document.getElementById('enemy-avatar').style.transform = 'scale(0.8) rotate(20deg)';
+
+    exp++;
+    gems += 10;
+    document.getElementById('gem-count').innerText = gems;
+
+    // レベルアップ判定
+    if (exp >= reqExp) {
+      level++;
+      exp = 0;
+      // 必要正解数を少しずつ増やす (2->3->4->5...)
+      reqExp = level + 1; 
+      playSound('levelup');
+
+      // 称号・ドラゴンアップデート
+      const titleIndex = Math.min(Math.floor((level - 1) / 1.5), titles.length - 1);
+      document.getElementById('player-title').innerText = titles[titleIndex];
+      updatePet();
+
+      document.getElementById('msg-box').innerText = `✨ レベルアップ！ Lv.${level} になった！`;
+    } else {
+      document.getElementById('msg-box').innerText = `こうげき ヒット！ ${currentEnemy.name} を たおした！`;
+    }
+
+    document.getElementById('player-lv').innerText = level;
+    document.getElementById('player-exp').innerText = exp;
+    document.getElementById('req-exp').innerText = reqExp;
+
+    setTimeout(() => {
+      document.getElementById('enemy-avatar').style.transform = 'none';
+      generateProblem();
+    }, 900);
+
+  } else {
+    // 不正解・ミス
+    playSound('wrong');
+    document.getElementById('msg-box').innerText = `ミス！ こうげきが はずれてしまった…`;
+    clearInput();
+  }
+}
+
+// --- 10分タイマー ---
+const timerInterval = setInterval(() => {
+  totalTimeSec--;
+  const min = Math.floor(totalTimeSec / 60);
+  const sec = totalTimeSec % 60;
+  document.getElementById('time-left').innerText = `${min}:${sec < 10 ? '0' : ''}${sec}`;
+
+  if (totalTimeSec <= 0) {
+    clearInterval(timerInterval);
+    document.getElementById('lock-screen').style.display = 'flex';
+  }
+}, 1000);
+
+// 初期化
+generateProblem();
+updatePet();
+</script>
+</body>
+</html>
