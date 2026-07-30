@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>さんすうクエスト ～まほうのすうじとドラゴンのそだてかた～</title>
+<title>さんすうクエスト ～まほうのすうじとドラゴンのそだてかた～ Pro</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
   body {
@@ -19,9 +19,9 @@
     color: #334155;
   }
   .app-card {
-    background: #fef3c7; /* 羊皮紙風カラー */
+    background: #fef3c7;
     width: 100%;
-    max-width: 420px;
+    max-width: 440px;
     border-radius: 20px;
     box-shadow: 0 0 25px rgba(251, 191, 36, 0.4), inset 0 0 15px rgba(180, 83, 9, 0.2);
     padding: 16px;
@@ -31,7 +31,7 @@
     border: 6px solid #b45309;
   }
 
-  /* ステータスバー（RPGヘッダー） */
+  /* ステータスバー */
   .rpg-status-bar {
     background: #451a03;
     color: #fef3c7;
@@ -42,10 +42,31 @@
     justify-content: space-between;
     align-items: center;
     border: 2px solid #d97706;
-    margin-bottom: 12px;
+    margin-bottom: 8px;
   }
   .status-item { font-weight: bold; }
   .title-badge { color: #fbbf24; font-size: 0.8em; display: block; }
+
+  /* 難易度切り替えバー */
+  .mode-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #78350f;
+    padding: 6px 12px;
+    border-radius: 8px;
+    margin-bottom: 10px;
+    color: #fef3c7;
+    font-size: 0.8em;
+  }
+  .mode-select {
+    background: #fef3c7;
+    border: 1px solid #b45309;
+    border-radius: 4px;
+    padding: 2px 6px;
+    font-weight: bold;
+    color: #451a03;
+  }
 
   /* バトル＆育成ステージ */
   .battle-stage {
@@ -69,15 +90,13 @@
     font-size: 3.2em; 
     filter: drop-shadow(0 4px 6px rgba(0,0,0,0.5)); 
     transition: transform 0.2s;
-    letter-spacing: -5px; /* ドラゴンが増えた際並びやすく調整 */
+    letter-spacing: -5px;
   }
   .unit-name { font-size: 0.75em; font-weight: bold; margin-top: 4px; color: #e0e7ff; }
   
-  /* HPゲージ */
   .hp-bar-bg { width: 80px; height: 8px; background: #374151; border-radius: 4px; margin: 4px auto; overflow: hidden; }
   .hp-bar-fill { height: 100%; background: #ef4444; width: 100%; transition: width 0.3s; }
 
-  /* メッセージウィンドウ */
   .msg-box {
     background: rgba(0, 0, 0, 0.7);
     border: 2px solid #f59e0b;
@@ -94,7 +113,7 @@
     font-size: 2.5em;
     font-weight: bold;
     color: #451a03;
-    margin: 10px 0;
+    margin: 8px 0;
     min-height: 65px;
     display: flex;
     justify-content: center;
@@ -110,7 +129,7 @@
     display: inline-block;
   }
 
-  /* テンキー（RPGコマンド風） */
+  /* テンキー */
   .numpad {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
@@ -124,18 +143,18 @@
     font-size: 1.6em;
     font-weight: bold;
     color: #451a03;
-    padding: 12px 0;
+    padding: 10px 0;
     cursor: pointer;
   }
   .btn:active { transform: translateY(3px); border-bottom-width: 2px; }
   .btn-action { background: linear-gradient(to bottom, #22c55e, #15803d); color: white; border-color: #14532d; border-bottom-color: #052e16; }
   .btn-clear { background: linear-gradient(to bottom, #ef4444, #b91c1c); color: white; border-color: #7f1d1d; border-bottom-color: #450a0a; }
 
-  /* 10分タイマー遮断 */
-  #lock-screen {
+  /* 管理・ロック画面モーダル */
+  .overlay {
     position: absolute;
     top: 0; left: 0; width: 100%; height: 100%;
-    background: #020617;
+    background: rgba(2, 6, 23, 0.95);
     color: #fef08a;
     display: flex;
     flex-direction: column;
@@ -144,6 +163,16 @@
     z-index: 100;
     padding: 20px;
     display: none;
+  }
+  .admin-btn {
+    background: #3b82f6;
+    color: white;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.8em;
+    font-weight: bold;
   }
 </style>
 </head>
@@ -165,17 +194,28 @@
     </div>
   </div>
 
+  <!-- コース選択 & 保護者管理モードへの入口 -->
+  <div class="mode-bar">
+    <div>
+      コース: 
+      <select id="grade-select" class="mode-select" onchange="changeGrade()">
+        <option value="1">1ねんせい（10まで）</option>
+        <option value="2">2ね年せい（くりあがり）</option>
+        <option value="3">九九・かけざん</option>
+      </select>
+    </div>
+    <button class="admin-btn" onclick="openAdmin()">📊 レポート</button>
+  </div>
+
   <!-- バトル＆ペット育成エリア -->
   <div class="battle-stage">
     <div class="monster-area">
-      <!-- パートナー（ドラゴン進化・仲間増加エリア） -->
       <div class="unit-box" style="max-width: 50%;">
         <div class="unit-avatar" id="pet-avatar">🥚</div>
         <div class="hp-bar-bg"><div class="hp-bar-fill" style="background:#22c55e;"></div></div>
         <div class="unit-name" id="pet-name">タマゴ</div>
       </div>
       <div style="font-size:1.5em; font-weight:bold; color:#f59e0b;">VS</div>
-      <!-- 敵モンスター -->
       <div class="unit-box" style="max-width: 40%;">
         <div class="unit-avatar" id="enemy-avatar">👾</div>
         <div class="hp-bar-bg"><div class="hp-bar-fill" id="enemy-hp"></div></div>
@@ -208,18 +248,29 @@
   </div>
 
   <!-- 10分ロック画面 -->
-  <div id="lock-screen">
+  <div id="lock-screen" class="overlay">
     <h2 style="font-size:1.8em; margin-bottom:15px; color:#f59e0b;">🏰 10ふん たったよ！</h2>
     <p style="line-height:1.8; font-size:1.1em; text-align:center;">
       勇者よ、きゅうけいも 修行の1つだ！<br>
       目をやすめてから、また 冒険に出かけよう！<br><br>
-      （画面を 閉じてね）
+      （また あした あそぼうね）
     </p>
+  </div>
+
+  <!-- 学習レポートモーダル -->
+  <div id="admin-modal" class="overlay">
+    <h2 style="font-size:1.5em; color:#f59e0b; margin-bottom:10px;">📈 学習保護者レポート</h2>
+    <div style="text-align:left; background:#1e293b; padding:15px; border-radius:10px; width:100%; font-size:0.9em; line-height:1.6;">
+      <p>総解答数: <strong id="stats-total">0</strong> 問</p>
+      <p>正解率: <strong id="stats-accuracy">0</strong> %</p>
+      <p>獲得ダイヤ: 💎 <strong id="stats-gems">0</strong> 個</p>
+    </div>
+    <button class="btn btn-action" style="margin-top:15px; width:100%; font-size:1em;" onclick="closeAdmin()">ゲームにもどる</button>
   </div>
 </div>
 
 <script>
-// --- 音響効果（Web Audio API） ---
+// 音響効果（Web Audio API）
 const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 function playSound(type) {
   if (audioCtx.state === 'suspended') audioCtx.resume();
@@ -227,20 +278,20 @@ function playSound(type) {
   const gain = audioCtx.createGain();
   osc.connect(gain); gain.connect(audioCtx.destination);
 
-  if (type === 'attack') { // 攻撃ヒット
+  if (type === 'attack') {
     osc.type = 'square';
     osc.frequency.setValueAtTime(300, audioCtx.currentTime);
     osc.frequency.exponentialRampToValueAtTime(80, audioCtx.currentTime + 0.15);
     gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
     gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.15);
     osc.start(); osc.stop(audioCtx.currentTime + 0.15);
-  } else if (type === 'wrong') { // ミス
+  } else if (type === 'wrong') {
     osc.type = 'sawtooth';
     osc.frequency.setValueAtTime(120, audioCtx.currentTime);
     gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
     gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.25);
     osc.start(); osc.stop(audioCtx.currentTime + 0.25);
-  } else if (type === 'levelup') { // レベルアップファンファーレ
+  } else if (type === 'levelup') {
     const notes = [261, 329, 392, 523, 659, 783];
     notes.forEach((freq, i) => {
       const o = audioCtx.createOscillator();
@@ -255,14 +306,18 @@ function playSound(type) {
   }
 }
 
-// --- ゲームデータ ＆ 進化テーブル ---
-let level = 1;
-let exp = 0;
-let reqExp = 2; // Lv.1->2 はたった2問でOK
-let gems = 0;
+// ゲームデータとストレージ復元
+let level = parseInt(localStorage.getItem('sq_level')) || 1;
+let exp = parseInt(localStorage.getItem('sq_exp')) || 0;
+let reqExp = level + 1;
+let gems = parseInt(localStorage.getItem('sq_gems')) || 0;
+let totalSolved = parseInt(localStorage.getItem('sq_totalSolved')) || 0;
+let correctCount = parseInt(localStorage.getItem('sq_correctCount')) || 0;
+
 let currentAnswer = 0;
 let userInputValue = "";
-let totalTimeSec = 600; // 10分制限
+let totalTimeSec = 600;
+let currentGrade = "1";
 
 const enemies = [
   { name: "スライム", avatar: "👾" },
@@ -273,98 +328,81 @@ const enemies = [
   { name: "ドラゴン", avatar: "🐲" }
 ];
 let currentEnemy = enemies[0];
-
 const titles = ["見習い冒険者", "ドラゴンつかい", "魔法の勇者", "伝説のヒーロー", "ドラゴンマスター", "神話の勇者"];
 
-// --- ドラゴンの超速進化＆色違い仲間追加ロジック ---
+function saveData() {
+  localStorage.setItem('sq_level', level);
+  localStorage.setItem('sq_exp', exp);
+  localStorage.setItem('sq_gems', gems);
+  localStorage.setItem('sq_totalSolved', totalSolved);
+  localStorage.setItem('sq_correctCount', correctCount);
+}
+
 function updatePet() {
   const petAvatar = document.getElementById('pet-avatar');
   const petName = document.getElementById('pet-name');
-
-  if (level === 1) {
-    petAvatar.innerText = "🥚"; 
-    petName.innerText = "タマゴ";
-  } else if (level === 2) {
-    petAvatar.innerText = "🐣"; 
-    petName.innerText = "チビドラ";
-  } else if (level === 3) {
-    petAvatar.innerText = "🐲"; 
-    petName.innerText = "みどりドラゴン";
-  } else if (level === 4) {
-    // 最終形態へ進化
-    petAvatar.innerText = "🐉"; 
-    petName.innerText = "神龍（しんりゅう）";
-  } else if (level === 5) {
-    // ★色違いの仲間（赤ドラゴン）が増える！
-    petAvatar.innerText = "🐉🐲"; 
-    petName.innerText = "あかドラが なかまに！";
-  } else if (level === 6) {
-    // ★さらに色違いの仲間（青ドラゴン）が増える！
-    petAvatar.innerText = "🐉🐲🐉"; 
-    petName.innerText = "あおドラが なかまに！";
-  } else {
-    // ★オールスター（金・最強チーム）
-    petAvatar.innerText = "🐉🐲✨"; 
-    petName.innerText = "さいきょう ドラゴンたい！";
-  }
+  if (level === 1) { petAvatar.innerText = "🥚"; petName.innerText = "タマゴ"; }
+  else if (level === 2) { petAvatar.innerText = "🐣"; petName.innerText = "チビドラ"; }
+  else if (level === 3) { petAvatar.innerText = "🐲"; petName.innerText = "みどりドラゴン"; }
+  else if (level === 4) { petAvatar.innerText = "🐉"; petName.innerText = "神龍（しんりゅう）"; }
+  else if (level === 5) { petAvatar.innerText = "🐉🐲"; petName.innerText = "あかドラが なかまに！"; }
+  else if (level === 6) { petAvatar.innerText = "🐉🐲🐉"; petName.innerText = "あおドラが なかまに！"; }
+  else { petAvatar.innerText = "🐉🐲✨"; petName.innerText = "さいきょう ドラゴンたい！"; }
 }
 
-// --- 出題ロジック（10～19の割合を5%に調整） ---
+function changeGrade() {
+  currentGrade = document.getElementById('grade-select').value;
+  generateProblem();
+}
+
 function generateProblem() {
   userInputValue = "";
   updateDisplay();
 
-  // 敵の変更
   currentEnemy = enemies[Math.floor(Math.random() * enemies.length)];
   document.getElementById('enemy-avatar').innerText = currentEnemy.avatar;
   document.getElementById('enemy-name').innerText = currentEnemy.name;
   document.getElementById('enemy-hp').style.width = '100%';
   document.getElementById('msg-box').innerText = `あくまの ${currentEnemy.name} が あらわれた！`;
 
-  const isAddition = Math.random() < 0.5; // 足し算 / 引き算
-  
-  // 10～19が出る頻度を「わずか5%（メインは10の分解）」に調整
-  const isHardType = Math.random() < 0.05; 
-
   let num1, num2, ans;
 
-  if (isAddition) {
-    if (!isHardType) {
-      // メイン(95%): 10までの足し算（10の分解・合成）
-      ans = Math.floor(Math.random() * 10) + 1; // 1～10
+  if (currentGrade === "1") { // 1年生：10までの足し算・引き算
+    if (Math.random() < 0.5) {
+      ans = Math.floor(Math.random() * 10) + 1;
       num1 = Math.floor(Math.random() * ans);
       num2 = ans - num1;
+      document.getElementById('problem-text').innerText = `${num1} ＋ ${num2} ＝ `;
     } else {
-      // たまに(5%): 10～19のくり上がりなし足し算
-      const d1 = Math.floor(Math.random() * 5); // 0~4
-      const d2 = Math.floor(Math.random() * (9 - d1)); 
-      num1 = 10 + d1;
-      num2 = d2;
-      ans = num1 + num2;
-    }
-    document.getElementById('problem-text').innerText = `${num1} ＋ ${num2} ＝ `;
-  } else {
-    if (!isHardType) {
-      // メイン(95%): 10までの引き算（マイナスなし）
-      num1 = Math.floor(Math.random() * 10) + 1; // 1～10
+      num1 = Math.floor(Math.random() * 10) + 1;
       num2 = Math.floor(Math.random() * (num1 + 1));
       ans = num1 - num2;
-    } else {
-      // たまに(5%): 10～19からの引き算
-      const d1 = Math.floor(Math.random() * 9) + 1; 
-      num2 = Math.floor(Math.random() * (d1 + 1));
-      num1 = 10 + d1;
-      ans = num1 - num2;
+      document.getElementById('problem-text').innerText = `${num1} － ${num2} ＝ `;
     }
-    document.getElementById('problem-text').innerText = `${num1} － ${num2} ＝ `;
+  } else if (currentGrade === "2") { // 2年生：繰り上がり・繰り下がりあり
+    if (Math.random() < 0.5) {
+      num1 = Math.floor(Math.random() * 20) + 10;
+      num2 = Math.floor(Math.random() * 15) + 5;
+      ans = num1 + num2;
+      document.getElementById('problem-text').innerText = `${num1} ＋ ${num2} ＝ `;
+    } else {
+      num1 = Math.floor(Math.random() * 30) + 15;
+      num2 = Math.floor(Math.random() * 10) + 5;
+      ans = num1 - num2;
+      document.getElementById('problem-text').innerText = `${num1} － ${num2} ＝ `;
+    }
+  } else { // 3年生：九九かけざん
+    num1 = Math.floor(Math.random() * 9) + 1;
+    num2 = Math.floor(Math.random() * 9) + 1;
+    ans = num1 * num2;
+    document.getElementById('problem-text').innerText = `${num1} × ${num2} ＝ `;
   }
 
   currentAnswer = ans;
 }
 
-// --- 入力・ボタン処理 ---
 function pressNum(num) {
-  if (userInputValue.length < 2) {
+  if (userInputValue.length < 3) {
     userInputValue += num;
     updateDisplay();
   }
@@ -379,34 +417,30 @@ function updateDisplay() {
   document.getElementById('user-input').innerText = userInputValue === "" ? "?" : userInputValue;
 }
 
-// --- こうげき（答え合わせ） ---
 function checkAnswer() {
   if (userInputValue === "") return;
 
+  totalSolved++;
   const val = parseInt(userInputValue, 10);
+
   if (val === currentAnswer) {
-    // 正解・攻撃ヒット
+    correctCount++;
     playSound('attack');
     document.getElementById('enemy-hp').style.width = '0%';
     document.getElementById('enemy-avatar').style.transform = 'scale(0.8) rotate(20deg)';
 
     exp++;
     gems += 10;
-    document.getElementById('gem-count').innerText = gems;
+    saveData();
 
-    // レベルアップ判定
     if (exp >= reqExp) {
       level++;
       exp = 0;
-      // 必要正解数を少しずつ増やす (2->3->4->5...)
-      reqExp = level + 1; 
+      reqExp = level + 1;
       playSound('levelup');
-
-      // 称号・ドラゴンアップデート
       const titleIndex = Math.min(Math.floor((level - 1) / 1.5), titles.length - 1);
       document.getElementById('player-title').innerText = titles[titleIndex];
       updatePet();
-
       document.getElementById('msg-box').innerText = `✨ レベルアップ！ Lv.${level} になった！`;
     } else {
       document.getElementById('msg-box').innerText = `こうげき ヒット！ ${currentEnemy.name} を たおした！`;
@@ -415,6 +449,7 @@ function checkAnswer() {
     document.getElementById('player-lv').innerText = level;
     document.getElementById('player-exp').innerText = exp;
     document.getElementById('req-exp').innerText = reqExp;
+    document.getElementById('gem-count').innerText = gems;
 
     setTimeout(() => {
       document.getElementById('enemy-avatar').style.transform = 'none';
@@ -422,14 +457,14 @@ function checkAnswer() {
     }, 900);
 
   } else {
-    // 不正解・ミス
     playSound('wrong');
+    saveData();
     document.getElementById('msg-box').innerText = `ミス！ こうげきが はずれてしまった…`;
     clearInput();
   }
 }
 
-// --- 10分タイマー ---
+// タイマー
 const timerInterval = setInterval(() => {
   totalTimeSec--;
   const min = Math.floor(totalTimeSec / 60);
@@ -442,7 +477,24 @@ const timerInterval = setInterval(() => {
   }
 }, 1000);
 
-// 初期化
+// 管理画面
+function openAdmin() {
+  document.getElementById('stats-total').innerText = totalSolved;
+  const accuracy = totalSolved > 0 ? Math.round((correctCount / totalSolved) * 100) : 0;
+  document.getElementById('stats-accuracy').innerText = accuracy;
+  document.getElementById('stats-gems').innerText = gems;
+  document.getElementById('admin-modal').style.display = 'flex';
+}
+
+function closeAdmin() {
+  document.getElementById('admin-modal').style.display = 'none';
+}
+
+// 初期化表示
+document.getElementById('player-lv').innerText = level;
+document.getElementById('player-exp').innerText = exp;
+document.getElementById('req-exp').innerText = reqExp;
+document.getElementById('gem-count').innerText = gems;
 generateProblem();
 updatePet();
 </script>
